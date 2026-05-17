@@ -1,0 +1,12 @@
+{
+  "name": "Aura AI | Digital Fashion Publication",
+  "description": "A high-end digital fashion publication and personal stylist website providing accessible yet premium style advice and affordable wardrobe architecture.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "AI Image Analysis",
+    "Style Personalization",
+    "E-commerce Integration"
+  ]
+}

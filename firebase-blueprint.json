@@ -1,0 +1,91 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile containing basic info and fashion preferences.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "fashionAesthetic": { "type": "string" },
+        "fashionScore": { "type": "number" },
+        "styleQuizResults": {
+          "type": "object",
+          "properties": {
+            "philosophy": { "type": "string" },
+            "colorPalette": { "type": "string" },
+            "silhouette": { "type": "string" },
+            "environment": { "type": "string" },
+            "influence": { "type": "string" }
+          }
+        },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "SavedOutfit": {
+      "title": "Saved Outfit",
+      "description": "A collection of clothing and accessory recommendations for a specific analysis.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "title": { "type": "string" },
+        "sourceImage": { "type": "string" },
+        "sourceImages": { "type": "array", "items": { "type": "string" } },
+        "aesthetic": { "type": "string" },
+        "score": { "type": "number" },
+        "items": { 
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "category": { "type": "string" },
+              "itemType": { "type": "string" },
+              "description": { "type": "string" },
+              "material": { "type": "string" },
+              "occasion": { "type": "string" },
+              "priceINR": { "type": "string" },
+              "priceValue": { "type": "number" },
+              "imageUrl": { "type": "string" },
+              "matchScore": { "type": "number" },
+              "whySuggested": { "type": "string" },
+              "shoppingLink": { "type": "string" },
+              "tags": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "sourceImage", "aesthetic", "score", "items", "createdAt"]
+    },
+    "Feedback": {
+      "title": "Style Feedback",
+      "description": "User feedback on specific fashion recommendations to refine AI responses.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "itemTitle": { "type": "string" },
+        "feedbackType": { "type": "string", "enum": ["not_my_style", "too_expensive", "love"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "itemTitle", "feedbackType", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User's individual profile document."
+    },
+    "users/{userId}/saved_outfits/{outfitId}": {
+      "schema": "SavedOutfit",
+      "description": "Historical outfit recommendations saved by the user."
+    },
+    "users/{userId}/feedback/{feedbackId}": {
+      "schema": "Feedback",
+      "description": "User feedback on specific fashion recommendations."
+    }
+  }
+}

@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() { return request.auth != null; }
+    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+
+    // --- User Validation ---
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'updatedAt']) 
+        && data.uid is string && data.uid == request.auth.uid
+        && data.email is string && data.email.size() <= 256
+        && data.updatedAt == request.time
+        && (data.get('fashionScore', 100) is number)
+        && (data.get('fashionAesthetic', '') is string);
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false; // Users cannot be listed except by admin (not implemented)
+      
+      allow create: if isVerified() && isValidId(userId) && userId == request.auth.uid && isValidUser(incoming());
+      allow update: if isVerified() && isOwner(userId) && isValidUser(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'fashionAesthetic', 'fashionScore', 'updatedAt', 'uid', 'email'])
+        && incoming().uid == existing().uid
+        && incoming().email == existing().email
+      );
+    }
+
+    // --- Saved Outfits Validation ---
+    function isValidSavedOutfit(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'sourceImage', 'aesthetic', 'score', 'items', 'createdAt'])
+        && data.id is string && data.id.size() <= 128
+        && data.ownerId is string && data.ownerId == request.auth.uid
+        && data.sourceImage is string && data.sourceImage.size() <= 1048576 // 1MB max for base64 or URL
+        && (data.get('sourceImages', []) is list)
+        && data.aesthetic is string && data.aesthetic.size() <= 100
+        && data.score is number && data.score >= 0 && data.score <= 100
+        && data.items is list && data.items.size() <= 50
+        && data.createdAt == request.time;
+    }
+
+    match /users/{userId}/saved_outfits/{outfitId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      
+      allow create: if isVerified() && isValidId(outfitId) && isOwner(userId) && isValidSavedOutfit(incoming());
+      allow update: if isVerified() && isOwner(userId) && isValidSavedOutfit(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['title', 'items'])
+        && incoming().createdAt == existing().createdAt
+        && incoming().ownerId == existing().ownerId
+      );
+      allow delete: if isOwner(userId);
+    }
+
+    // --- Feedback Validation ---
+    function isValidFeedback(data) {
+      return data.keys().hasAll(['userId', 'itemTitle', 'feedbackType', 'createdAt'])
+        && data.userId is string && data.userId == request.auth.uid
+        && data.itemTitle is string && data.itemTitle.size() <= 256
+        && data.feedbackType in ['not_my_style', 'too_expensive', 'love']
+        && data.createdAt == request.time;
+    }
+
+    match /users/{userId}/feedback/{feedbackId} {
+      allow read: if isOwner(userId);
+      allow create: if isVerified() && isOwner(userId) && isValidFeedback(incoming());
+      allow update, delete: if false;
+    }
+  }
+}
